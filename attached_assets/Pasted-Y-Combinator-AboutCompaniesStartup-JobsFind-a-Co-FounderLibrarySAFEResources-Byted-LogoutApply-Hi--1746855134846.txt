@@ -1,0 +1,147 @@
+Y Combinator
+AboutCompaniesStartup JobsFind a Co-FounderLibrarySAFEResources
+Byted · LogoutApply
+Hi, Ray! Find 2000+ YC startups hiring on the YC company directory.
+
+Browse startups
+Home
+›
+Companies
+›
+Focus Buddy
+
+Focus Buddy
+AI Productivity Coach you speak with while working to stay focused…
+Summer 2024
+Active
+artificial-intelligence
+consumer
+productivity
+mental-health
+conversational-ai
+San Francisco
+Company
+Jobs
+0
+ https://www.focusbuddy.ai/
+Reach out to us at founders@focusbuddy.ai
+
+Focus buddy is an AI productivity coach that stays on calls with you and help you accomplish your important work goals on a daily basis, even when you are struggling to focus.
+
+We noticed that our users develop a productive relationship with Focus Buddy. Users stay on calls for multiple hours everyday where they depend on Focus Buddy to:
+• Avoid procrastination and get started: Address hidden anxieties, embrace imperfection, chunk tasks, kickstart with mini-goals, and use regular check-ins to maintain momentum.
+• Recover from distractions and stay focused: Focus Buddy detects when they are working on less important tasks or scrolling on social media, help them overcome the underlying concerns feeding the distraction, and help them get back to the important task
+• Manage stress and Prevent Burnout: Focus Buddy detects stress buildup, integrates mindfulness habits to the workflow, helps take short rejuvenating breaks, and stay composed.
+
+Our Initial ICP is people with ADHD who are highly motivated but also highly blocked by internal and environmental factors. In the future, we believe each worker should have their own personal coach that enforces proven productivity techniques in real time to help them extract more focused hours every day with the same effort.
+Active Founders
+Adnan Sherif
+Adnan Sherif
+Founder
+ 
+Yash Ramchandani
+Yash Ramchandani
+Founder
+Twitter account
+ 
+Focus Buddy
+Focus Buddy
+Founded:
+2024
+Batch:
+Summer 2024
+Team Size:
+2
+Status:
+Active
+Location:
+San Francisco
+Primary Partner:
+Michael Seibel
+Company Launches
+Focus Buddy - AI productivity coach to get more work done
+See original launch post
+TLDR
+FocusBuddy is an AI productivity coach that sits in the background on your computer and speaks to you while you work to help you think clearly, avoid distractions and hold you accountable. Our users converse with the AI over a phone call for 3-4 hours everyday while they’re working.
+
+The Cost of ADHD
+We’re starting by focusing on people that struggle with ADHD
+
+People with ADHD consider it the BIGGEST blocker in their life and the PRIMARY cause of their poor grades, missing promotions, and getting fired.
+
+17 million adults and children in the US
+2-4 more hours wasted every day compared to peers
+Beyond ADHD, there are 80 Million people knowledge workers in high income countries that struggle with workplace productivity that FocusBuddy will serve
+
+How Focus Buddy helps our user Jeff
+Jeff is a brilliant product engineer who has ADHD. He often struggles to complete work due to his tendency to hyper-focus on details and get distracted by sudden impulses. Here is what Jeff's new workflow looks like since he started using FocusBuddy:
+
+Jeff calls Focus Buddy first thing in the morning after breakfast. They go over his to-do list together and create a schedule for his day. Jeff then begins his first task - writing a draft PRD. He explains his approach to FocusBuddy and asks for frequent check-ins to keep him on track.
+
+An hour into drafting, Jeff notices a small discrepancy in a user activity chart. His ADHD brain latches onto this detail, and he spends the next 30 minutes hyper-focusing on it, losing sight of the bigger picture. Just then, FocusBuddy speaks up: "How's it going?" Jeff explains: "He is still figuring out the details on the chart" FocusBuddy detects that Jeff has been hyper-focusing on a detail and helps Jeff realize that he is falling behind on schedule with more important parts of the PRD.
+
+Focus Buddy then works with Jeff to wrap up work on the chart discrepancy and reorganize his schedule to come back to the chart later in the day. They then do a 5-minute meditation to shift his focus away from the discrepancy and ease his mind back onto the main task. At the end of the day, FocusBuddy helps Jeff perform a daily reflection and prepare for his day tomorrow.
+
+Jeff and our other users experience multiple types of interventions by Focus Buddy every single day and attribute their new-found productivity to it.
+
+Why Focus Buddy works
+Today, people with ADHD spend hours every day virtually co-working on apps like Focusmate, updating to-do lists, using meditation apps like Calm, and journaling with little success. It is extremely hard to keep these apps updated, they have very little context about you and are unable to proactively provide timely support when needed.
+
+Focus Buddy is deeply integrated, is seamless to interact with, builds a lot of context over time and is able to leverage this context at critical moments to provide the necessary support.
+
+On top of that, our voice AI infrastructure is revolutionising the way humans and AI interact. we're crafting an entirely new paradigm for fluid, natural conversations that feel as intuitive as talking to another person. Here are some examples:
+
+Multimodal Voice + Text Conversation
+
+
+
+Proactive AI Initiated Check-ins
+
+
+
+Our Team
+
+
+Adnan and Yash have been best friends for over a decade, roommates for the last two years, and worked on the Google Pixel team as a Product Manager and ML Engineer. Yash led product and safety for Generative AI apps on the latest Pixel phone, while Adnan worked on training and deploying low-latency, resource-constrained, fully on-device Gemini models used by these apps.
+
+Adnan is a national triple jump champion, and prior to Google, he conducted AI research at UC Berkeley’s SkyLab with Ion Stoica (co-founder of Databricks), focusing on scaling graph machine learning to problems with millions of nodes. Yash has worked at startups like Kalshi and Relay, helping them from pre-launch to launch.
+
+Adnan learned to manage the ADHD symptoms he faced throughout high school and college and went on to help others cope with the same condition.
+
+Our Asks
+Reach out to us at founders@focusbuddy.ai to learn more and sign up on our website to try us out and give us feedback. If you know anyone with ADHD, feel free to send them our way
+
+Contact:  founders@focusbuddy.ai  | Website: https://www.focusbuddy.ai/?ref=yc
+
+Footer
+Y CombinatorY Combinator
+Programs
+YC Program
+Startup School
+Work at a Startup
+Co-Founder Matching
+Company
+YC Blog
+Contact
+Press
+People
+Careers
+Privacy Policy
+Notice at Collection
+Security
+Terms of Use
+Resources
+Startup Directory
+Startup Library
+Investors
+SAFE
+Hacker News
+Launch YC
+YC Deals
+Make something people want.Apply
+Twitter
+Facebook
+Instagram
+LinkedIn
+Youtube
+© 2025 Y Combinator
