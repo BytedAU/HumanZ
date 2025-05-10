@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth0 } from "@/hooks/use-auth0";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Header() {
   const [location] = useLocation();
-  const { user, logoutMutation, upgradeToPremimuMutation } = useAuth();
+  const { user, isAuthenticated, logout, loginWithRedirect } = useAuth0();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Get user's initials for Avatar fallback
@@ -52,11 +52,17 @@ export default function Header() {
   };
   
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logout({
+      logoutParams: {
+        returnTo: window.location.origin,
+      },
+    });
   };
   
-  const handleUpgrade = () => {
-    upgradeToPremimuMutation.mutate();
+  const handleLogin = () => {
+    loginWithRedirect({
+      appState: { returnTo: location },
+    });
   };
 
   return (
@@ -93,131 +99,111 @@ export default function Header() {
           
           {/* User menu and mobile menu button */}
           <div className="flex items-center">
-            {!user?.isPremium && (
+            {isAuthenticated ? (
+              <>
+                <div className="hidden sm:flex sm:items-center">
+                  <button className="p-1 rounded-full text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                    <span className="sr-only">View notifications</span>
+                    <Bell className="h-6 w-6" />
+                  </button>
+                  
+                  <div className="ml-4 relative">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="flex rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
+                          <span className="sr-only">Open user menu</span>
+                          <Avatar>
+                            <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                            <AvatarFallback>{getInitials()}</AvatarFallback>
+                          </Avatar>
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Settings</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Log out</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                
+                {/* Mobile menu button */}
+                <div className="sm:hidden">
+                  <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-6 w-6" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right">
+                      <div className="flex flex-col space-y-4 py-4">
+                        <div className="flex items-center mb-4">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                            <AvatarFallback>{getInitials()}</AvatarFallback>
+                          </Avatar>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium">{user?.name}</p>
+                            <p className="text-xs text-muted-foreground">{user?.email}</p>
+                          </div>
+                        </div>
+                        
+                        <nav className="grid gap-2">
+                          {navItems.map((item) => (
+                            <Link key={item.name} href={item.href}>
+                              <a
+                                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                                  isActive(item.href)
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-foreground hover:bg-muted"
+                                }`}
+                                onClick={() => setMobileMenuOpen(false)}
+                              >
+                                {item.name}
+                              </a>
+                            </Link>
+                          ))}
+                        </nav>
+                        
+                        <div className="mt-auto">
+                          <Button 
+                            variant="outline" 
+                            className="w-full" 
+                            onClick={() => {
+                              handleLogout();
+                              setMobileMenuOpen(false);
+                            }}
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Log out
+                          </Button>
+                        </div>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </>
+            ) : (
               <Button 
                 variant="default" 
-                className="mr-4 hidden sm:flex" 
-                onClick={handleUpgrade}
-                disabled={upgradeToPremimuMutation.isPending}
+                onClick={handleLogin}
               >
-                <Crown className="h-4 w-4 mr-2" />
-                Upgrade
+                Log In
               </Button>
             )}
-            
-            <div className="hidden sm:flex sm:items-center">
-              <button className="p-1 rounded-full text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                <span className="sr-only">View notifications</span>
-                <Bell className="h-6 w-6" />
-              </button>
-              
-              <div className="ml-4 relative">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
-                      <span className="sr-only">Open user menu</span>
-                      <Avatar>
-                        <AvatarImage src={user?.avatar || ""} alt={user?.name || "User"} />
-                        <AvatarFallback>{getInitials()}</AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    {!user?.isPremium && (
-                      <DropdownMenuItem onClick={handleUpgrade}>
-                        <Crown className="mr-2 h-4 w-4" />
-                        <span>Upgrade to Premium</span>
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-            
-            {/* Mobile menu button */}
-            <div className="sm:hidden">
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right">
-                  <div className="flex flex-col space-y-4 py-4">
-                    <div className="flex items-center mb-4">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={user?.avatar || ""} alt={user?.name || "User"} />
-                        <AvatarFallback>{getInitials()}</AvatarFallback>
-                      </Avatar>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium">{user?.name}</p>
-                        <p className="text-xs text-muted-foreground">{user?.email}</p>
-                      </div>
-                    </div>
-                    
-                    <nav className="grid gap-2">
-                      {navItems.map((item) => (
-                        <Link key={item.name} href={item.href}>
-                          <a
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${
-                              isActive(item.href)
-                                ? "bg-primary/10 text-primary"
-                                : "text-foreground hover:bg-muted"
-                            }`}
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            {item.name}
-                          </a>
-                        </Link>
-                      ))}
-                    </nav>
-                    
-                    <div className="mt-auto space-y-2">
-                      {!user?.isPremium && (
-                        <Button 
-                          className="w-full" 
-                          onClick={() => {
-                            handleUpgrade();
-                            setMobileMenuOpen(false);
-                          }}
-                          disabled={upgradeToPremimuMutation.isPending}
-                        >
-                          <Crown className="h-4 w-4 mr-2" />
-                          Upgrade to Premium
-                        </Button>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        onClick={() => {
-                          handleLogout();
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Log out
-                      </Button>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
           </div>
         </div>
       </div>

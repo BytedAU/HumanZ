@@ -2,10 +2,12 @@ import { Auth0Provider, Auth0ProviderOptions, useAuth0 } from '@auth0/auth0-reac
 import { ReactNode } from 'react';
 import { useLocation } from 'wouter';
 
-// Environment variables that should be set in a production environment
-const domain = import.meta.env.VITE_AUTH0_DOMAIN || 'your-auth0-domain';
-const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || 'your-auth0-client-id';
-const audience = import.meta.env.VITE_AUTH0_AUDIENCE || 'your-auth0-audience';
+import { Auth0Config } from './use-auth0-config';
+
+// Use Auth0Config for configuration values
+const domain = Auth0Config.domain;
+const clientId = Auth0Config.clientId;
+const audience = Auth0Config.audience;
 
 interface Auth0ProviderWithNavigateProps {
   children: ReactNode;
@@ -34,7 +36,7 @@ export const Auth0ProviderWithNavigate = ({ children }: Auth0ProviderWithNavigat
 export { useAuth0 };
 
 // Auth0 login button component with customizable appearance
-export const LoginButton = () => {
+export function LoginButton() {
   const { loginWithRedirect } = useAuth0();
 
   return (
@@ -45,10 +47,10 @@ export const LoginButton = () => {
       Log In
     </button>
   );
-};
+}
 
 // Auth0 signup button component with customizable appearance
-export const SignupButton = () => {
+export function SignupButton() {
   const { loginWithRedirect } = useAuth0();
 
   return (
@@ -65,10 +67,10 @@ export const SignupButton = () => {
       Sign Up
     </button>
   );
-};
+}
 
 // Auth0 logout button component with customizable appearance
-export const LogoutButton = () => {
+export function LogoutButton() {
   const { logout } = useAuth0();
 
   return (
@@ -85,11 +87,12 @@ export const LogoutButton = () => {
       Log Out
     </button>
   );
-};
+}
 
-// Authentication guard component
-export const withAuthenticationRequired = (Component: React.ComponentType, options: { returnTo?: string } = {}) => {
-  return () => {
+// Authentication guard component as a regular function
+export function withAuthenticationRequired(Component: React.ComponentType, options: { returnTo?: string } = {}) {
+  // Return a named function for better compatibility with fast refresh
+  function WithAuthenticationRequired() {
     const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
     const [_location, navigate] = useLocation();
 
@@ -109,5 +112,7 @@ export const withAuthenticationRequired = (Component: React.ComponentType, optio
     }
 
     return <Component />;
-  };
-};
+  }
+  
+  return WithAuthenticationRequired;
+}
