@@ -1,0 +1,5 @@
+Copyright © 2025 BytedAU
+
+All rights reserved. No part of this software or its documentation may be
+used, copied, modified, distributed, or made available to the public in any form
+or by any means, without the express prior written permission of the copyright holder.
