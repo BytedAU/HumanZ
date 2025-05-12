@@ -8,6 +8,8 @@ import DashboardPage from "@/pages/dashboard-page";
 import GoalsPage from "@/pages/goals-page";
 import CommunityPage from "@/pages/community-page";
 import AnalyticsPage from "@/pages/analytics-page";
+import ChallengesPage from "@/pages/challenges-page";
+import ChallengePage from "@/pages/challenge-page";
 import { DevProtectedRoute } from "./lib/dev-protected-route";
 import { DevAuthProvider } from "./hooks/use-dev-auth";
 
@@ -24,6 +26,8 @@ function Router() {
       <DevProtectedRoute path="/goals" component={GoalsPage} />
       <DevProtectedRoute path="/community" component={CommunityPage} />
       <DevProtectedRoute path="/analytics" component={AnalyticsPage} />
+      <DevProtectedRoute path="/challenges" component={ChallengesPage} />
+      <DevProtectedRoute path="/challenges/:id" component={ChallengePage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
