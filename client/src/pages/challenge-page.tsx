@@ -1,7 +1,90 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { useRoute } from "wouter";
 import Header from "@/components/layout/header";
 import SiteFooter from "@/components/layout/site-footer";
+
+// Define participant type
+interface Participant {
+  id: number;
+  name: string;
+  avatar: string | null;
+  progress: number;
+}
+
+// Define challenge type
+interface ChallengeData {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  participantCount: number;
+  durationDays: number;
+  startDate: Date;
+  endDate: Date;
+  isCollaborative: boolean;
+  progress: number;
+  featuredImage: string;
+  createdBy: {
+    id: number;
+    name: string;
+    avatar: string | null;
+  };
+  tasks: Array<{
+    id: number;
+    title: string;
+    description: string;
+    dueDate: Date;
+    isCompleted: boolean;
+  }>;
+  resources: Array<{
+    id: number;
+    title: string;
+    type: string;
+    url: string;
+  }>;
+  discussions: Array<{
+    id: number;
+    author: {
+      id: number;
+      name: string;
+      avatar: string | null;
+    };
+    content: string;
+    timestamp: Date;
+    likes: number;
+    replies: Array<{
+      id: number;
+      author: {
+        id: number;
+        name: string;
+        avatar: string | null;
+      };
+      content: string;
+      timestamp: Date;
+      likes: number;
+    }>;
+  }>;
+  participants: Participant[];
+  leaderboard: Array<{
+    id: number;
+    name: string;
+    avatar: string | null;
+    points: number;
+  }>;
+  activityFeed: Array<{
+    id: number;
+    type: string;
+    user: {
+      id: number;
+      name: string;
+      avatar: string | null;
+    };
+    task?: string;
+    resource?: string;
+    timestamp: Date;
+  }>;
+}
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +124,7 @@ import {
 } from "lucide-react";
 
 // Mock challenge data
-const CHALLENGES = [
+const CHALLENGES: ChallengeData[] = [
   {
     id: 1,
     title: "San Francisco Social Explorer Challenge",

@@ -653,7 +653,7 @@ export default function CommunityPage() {
                           <div className="flex flex-col items-center order-3">
                             <div className="relative">
                               <Avatar className="h-20 w-20 border-4 border-amber-700 mb-2">
-                                <AvatarImage src={null} />
+                                <AvatarImage src={undefined} />
                                 <AvatarFallback className="text-xl">{getInitials(leaderboardData.leaderboard[2].name)}</AvatarFallback>
                               </Avatar>
                               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-amber-700 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg">3</div>
