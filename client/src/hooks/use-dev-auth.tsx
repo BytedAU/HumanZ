@@ -1,185 +1,179 @@
-import { createContext, ReactNode, useContext, useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { createContext, ReactNode, useContext, useState, useEffect } from "react";
+import { useMutation, UseQueryResult } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "../lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock user data for development
-const MOCK_USERS = [
-  {
-    id: 1,
-    name: 'Development User',
-    email: 'dev@example.com',
-    picture: 'https://i.pravatar.cc/150?u=dev',
-    sub: 'dev_user_1',
-  },
-  {
-    id: 2,
-    name: 'Test User',
-    email: 'test@example.com',
-    picture: 'https://i.pravatar.cc/150?u=test',
-    sub: 'test_user_1',
-  }
-];
-
-// Mock user interface to mimic Auth0 user
-interface DevUser {
+type User = {
   id: number;
+  username: string;
   name: string;
   email: string;
-  picture: string;
-  sub: string;
-}
+  avatar: string | null;
+  bio: string | null;
+  isPremium: boolean;
+  createdAt: string;
+};
 
-// Context type definition
-interface DevAuthContextType {
-  isAuthenticated: boolean;
+type LoginData = {
+  username: string;
+  password: string;
+};
+
+type RegisterData = {
+  username: string;
+  password: string;
+  email: string;
+  name: string;
+};
+
+type AuthContextType = {
+  user: User | null;
   isLoading: boolean;
-  user: DevUser | null;
-  loginWithRedirect: (options?: any) => void;
-  logout: (options?: any) => void;
-  getAccessTokenSilently: () => Promise<string>;
-}
+  error: Error | null;
+  loginMutation: any;
+  logoutMutation: any;
+  registerMutation: any;
+};
 
-// Create context with default values
-const DevAuthContext = createContext<DevAuthContextType>({
-  isAuthenticated: false,
-  isLoading: true,
-  user: null,
-  loginWithRedirect: () => {},
-  logout: () => {},
-  getAccessTokenSilently: async () => 'dev-token',
-});
-
-// Key for localstorage
-const AUTH_STORAGE_KEY = 'dev_auth_state';
+export const DevAuthContext = createContext<AuthContextType | null>(null);
 
 export function DevAuthProvider({ children }: { children: ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<DevUser | null>(null);
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Initialize auth state from localStorage
   useEffect(() => {
-    const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (storedAuth) {
+    // Auto-login for development purposes
+    const checkAuthentication = async () => {
       try {
-        const parsedAuth = JSON.parse(storedAuth);
-        setUser(parsedAuth.user);
-        setIsAuthenticated(true);
-      } catch (e) {
-        console.error('Failed to parse stored auth data', e);
-        localStorage.removeItem(AUTH_STORAGE_KEY);
+        const res = await fetch('/api/user');
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error("Failed to check authentication:", err);
+        setError(err as Error);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+
+    checkAuthentication();
   }, []);
 
-  // Login function
-  const loginWithRedirect = (options?: any) => {
-    // For development, we'll show a simple modal dialog for user selection
-    // In a real app, this would redirect to Auth0
-    
-    // For now, just log in as the first mock user
-    const selectedUser = MOCK_USERS[0];
-    
-    setUser(selectedUser);
-    setIsAuthenticated(true);
-    
-    // Store in localStorage for persistence
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: selectedUser }));
-    
-    toast({
-      title: 'Development login',
-      description: `Logged in as ${selectedUser.name}`,
-    });
-    
-    // Handle any return_to path from options
-    if (options?.appState?.returnTo) {
-      window.location.href = options.appState.returnTo;
-    }
-  };
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: LoginData) => {
+      try {
+        const res = await apiRequest("POST", "/api/login", credentials);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Login failed");
+        }
+        return await res.json();
+      } catch (err) {
+        throw err;
+      }
+    },
+    onSuccess: (userData: User) => {
+      setUser(userData);
+      queryClient.setQueryData(["/api/user"], userData);
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${userData.name}!`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    },
+  });
 
-  // Logout function
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    
-    toast({
-      title: 'Logged out',
-      description: 'You have been logged out of the development account',
-    });
-  };
+  const registerMutation = useMutation({
+    mutationFn: async (userData: RegisterData) => {
+      try {
+        const res = await apiRequest("POST", "/api/register", userData);
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Registration failed");
+        }
+        return await res.json();
+      } catch (err) {
+        throw err;
+      }
+    },
+    onSuccess: (userData: User) => {
+      setUser(userData);
+      queryClient.setQueryData(["/api/user"], userData);
+      toast({
+        title: "Registration successful",
+        description: `Welcome to HumanZ, ${userData.name}!`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Could not create account",
+        variant: "destructive",
+      });
+    },
+  });
 
-  // Mock token function (for API calls)
-  const getAccessTokenSilently = async () => {
-    return 'dev-mock-token-for-api-calls';
-  };
-
-  const contextValue: DevAuthContextType = {
-    isAuthenticated,
-    isLoading,
-    user,
-    loginWithRedirect,
-    logout,
-    getAccessTokenSilently,
-  };
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        const res = await apiRequest("POST", "/api/logout");
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || "Logout failed");
+        }
+      } catch (err) {
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      setUser(null);
+      queryClient.setQueryData(["/api/user"], null);
+      // Invalidate and refetch any queries that depend on auth status
+      queryClient.invalidateQueries();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
-    <DevAuthContext.Provider value={contextValue}>
+    <DevAuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        error,
+        loginMutation,
+        logoutMutation,
+        registerMutation,
+      }}
+    >
       {children}
     </DevAuthContext.Provider>
   );
 }
 
-// Hook for accessing the auth context
-export function useDevAuth() {
+export function useAuth() {
   const context = useContext(DevAuthContext);
   if (!context) {
-    throw new Error('useDevAuth must be used within a DevAuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
-
-// Development login selection modal
-export function DevLoginModal({ onClose, onLogin }: { 
-  onClose: () => void, 
-  onLogin: (user: DevUser) => void 
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Development Login</h2>
-        <p className="text-gray-600 mb-4">Select a user to login as:</p>
-        
-        <div className="space-y-2">
-          {MOCK_USERS.map(user => (
-            <button
-              key={user.id}
-              onClick={() => onLogin(user)}
-              className="flex items-center space-x-3 w-full p-3 rounded-md hover:bg-gray-100 transition"
-            >
-              <img 
-                src={user.picture} 
-                alt={user.name} 
-                className="w-10 h-10 rounded-full"
-              />
-              <div className="text-left">
-                <div className="font-medium">{user.name}</div>
-                <div className="text-sm text-gray-500">{user.email}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-        
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Header from "@/components/layout/header";
 import Sidebar from "@/components/layout/sidebar";
 import SiteFooter from "@/components/layout/site-footer";
@@ -13,6 +14,7 @@ import { Award, Trophy, Flag, Users, Star, ChevronRight } from "lucide-react";
 
 export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState("challenges");
+  const [, setLocation] = useLocation();
   
   const { data: leaderboardData } = useQuery({
     queryKey: ["/api/leaderboard"],
@@ -78,7 +80,7 @@ export default function CommunityPage() {
                   <h1 className="text-4xl font-bold mb-6">Grow Together with the Community</h1>
                   <p className="text-xl mb-8">Join challenges, compete on leaderboards, and attend events to accelerate your personal growth journey.</p>
                   <div className="flex space-x-4">
-                    <Button className="bg-white text-primary hover:bg-white/90">
+                    <Button className="bg-white text-primary hover:bg-white/90" onClick={() => setLocation('/challenges')}>
                       <Flag className="h-4 w-4 mr-2" />
                       Join a Challenge
                     </Button>
