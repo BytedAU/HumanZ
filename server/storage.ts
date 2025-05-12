@@ -15,6 +15,19 @@ const MemoryStore = createMemoryStore(session);
 
 // modify the interface with any CRUD methods
 // you might need
+import { 
+  LearningPath, 
+  InsertLearningPath, 
+  LearningPathStep, 
+  InsertLearningPathStep,
+  UserLearningPath,
+  InsertUserLearningPath,
+  UserStepCompletion,
+  InsertUserStepCompletion,
+  LearningPathWithSteps,
+  UserLearningPathDetail
+} from '@shared/learning-path-schema';
+
 export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
@@ -57,8 +70,50 @@ export interface IStorage {
   getWeeklyGrowthByUserId(userId: number): Promise<Growth[]>;
   createGrowth(growth: InsertGrowth): Promise<Growth>;
   
+  // Learning Path methods
+  getLearningPath(id: number): Promise<LearningPath | undefined>;
+  getLearningPathWithSteps(id: number): Promise<LearningPathWithSteps | undefined>;
+  getAllLearningPaths(): Promise<LearningPath[]>;
+  searchLearningPaths(query: string, category?: string, difficulty?: string): Promise<LearningPath[]>;
+  createLearningPath(learningPath: InsertLearningPath): Promise<LearningPath>;
+  updateLearningPath(id: number, learningPath: Partial<LearningPath>): Promise<LearningPath | undefined>;
+  deleteLearningPath(id: number): Promise<boolean>;
+  
+  // Learning Path Step methods
+  getLearningPathStep(id: number): Promise<LearningPathStep | undefined>;
+  getLearningPathSteps(learningPathId: number): Promise<LearningPathStep[]>;
+  createLearningPathStep(step: InsertLearningPathStep): Promise<LearningPathStep>;
+  updateLearningPathStep(id: number, step: Partial<LearningPathStep>): Promise<LearningPathStep | undefined>;
+  deleteLearningPathStep(id: number): Promise<boolean>;
+  
+  // User Learning Path methods
+  getUserLearningPath(id: number): Promise<UserLearningPath | undefined>;
+  getUserLearningPathDetail(id: number): Promise<UserLearningPathDetail | undefined>;
+  getUserLearningPathsByUserId(userId: number): Promise<UserLearningPath[]>;
+  getUserLearningPathDetailsByUserId(userId: number): Promise<UserLearningPathDetail[]>;
+  enrollUserInLearningPath(enrollment: InsertUserLearningPath): Promise<UserLearningPath>;
+  updateUserLearningPathProgress(
+    id: number, 
+    updates: { currentStepId?: number; status?: string; progressPercent?: number }
+  ): Promise<UserLearningPath | undefined>;
+  
+  // User Step Completion methods
+  getUserStepCompletions(userLearningPathId: number): Promise<UserStepCompletion[]>;
+  markStepAsCompleted(completion: InsertUserStepCompletion): Promise<UserStepCompletion>;
+  
+  // Generate AI Learning Path
+  generatePersonalizedLearningPath(
+    userId: number, 
+    preferences: { 
+      category: string;
+      difficulty: string;
+      focusAreas: string[];
+      durationDays: number;
+    }
+  ): Promise<LearningPathWithSteps>;
+  
   // Session storage
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -69,8 +124,12 @@ export class MemStorage implements IStorage {
   private challenges: Map<number, Challenge>;
   private userChallenges: Map<number, UserChallenge>;
   private growthEntries: Map<number, Growth>;
+  private learningPaths: Map<number, LearningPath>;
+  private learningPathSteps: Map<number, LearningPathStep>;
+  private userLearningPaths: Map<number, UserLearningPath>;
+  private userStepCompletions: Map<number, UserStepCompletion>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
   
   private userIdCounter: number;
   private goalIdCounter: number;
@@ -79,6 +138,10 @@ export class MemStorage implements IStorage {
   private challengeIdCounter: number;
   private userChallengeIdCounter: number;
   private growthIdCounter: number;
+  private learningPathIdCounter: number;
+  private learningPathStepIdCounter: number;
+  private userLearningPathIdCounter: number;
+  private userStepCompletionIdCounter: number;
 
   constructor() {
     this.users = new Map();
@@ -88,6 +151,10 @@ export class MemStorage implements IStorage {
     this.challenges = new Map();
     this.userChallenges = new Map();
     this.growthEntries = new Map();
+    this.learningPaths = new Map();
+    this.learningPathSteps = new Map();
+    this.userLearningPaths = new Map();
+    this.userStepCompletions = new Map();
     
     this.userIdCounter = 1;
     this.goalIdCounter = 1;
@@ -96,6 +163,10 @@ export class MemStorage implements IStorage {
     this.challengeIdCounter = 1;
     this.userChallengeIdCounter = 1;
     this.growthIdCounter = 1;
+    this.learningPathIdCounter = 1;
+    this.learningPathStepIdCounter = 1;
+    this.userLearningPathIdCounter = 1;
+    this.userStepCompletionIdCounter = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // 24h in ms
@@ -104,6 +175,7 @@ export class MemStorage implements IStorage {
     // Initialize with seed data for assessments and challenges
     this.seedAssessments();
     this.seedChallenges();
+    // Learning paths will be seeded after method implementation
   }
 
   // User methods
