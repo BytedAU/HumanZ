@@ -7,6 +7,9 @@ import { implementLearningPathMethods } from "./storage-methods";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize learning path methods
+  implementLearningPathMethods(storage);
+  
   // Set up authentication routes
   setupAuth(app);
 
@@ -451,6 +454,284 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+  
+  // Learning Paths API
+  
+  // Seed some initial learning paths if needed (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    storage.seedLearningPaths();
+  }
+  
+  // Get all learning paths
+  app.get("/api/learning-paths", async (req, res) => {
+    try {
+      const learningPaths = await storage.getAllLearningPaths();
+      res.json(learningPaths);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch learning paths" });
+    }
+  });
+  
+  // Search learning paths
+  app.get("/api/learning-paths/search", async (req, res) => {
+    try {
+      const query = req.query.q as string || '';
+      const category = req.query.category as string;
+      const difficulty = req.query.difficulty as string;
+      
+      const learningPaths = await storage.searchLearningPaths(query, category, difficulty);
+      res.json(learningPaths);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search learning paths" });
+    }
+  });
+  
+  // Get single learning path with steps
+  app.get("/api/learning-paths/:id", async (req, res) => {
+    try {
+      const pathId = parseInt(req.params.id);
+      const learningPath = await storage.getLearningPathWithSteps(pathId);
+      
+      if (!learningPath) {
+        return res.status(404).json({ message: "Learning path not found" });
+      }
+      
+      res.json(learningPath);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch learning path" });
+    }
+  });
+  
+  // Create a learning path (authenticated users only)
+  app.post("/api/learning-paths", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const pathSchema = z.object({
+        title: z.string().min(3).max(100),
+        description: z.string().min(10),
+        category: z.string(),
+        difficulty: z.string(),
+        estimatedDurationDays: z.number().int().positive(),
+        thumbnailUrl: z.string().url().nullable().optional()
+      });
+      
+      const validatedData = pathSchema.parse(req.body);
+      
+      const learningPath = await storage.createLearningPath({
+        ...validatedData,
+        thumbnailUrl: validatedData.thumbnailUrl || null,
+        isAiGenerated: false,
+        createdByUserId: req.user.id
+      });
+      
+      res.status(201).json(learningPath);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to create learning path" });
+    }
+  });
+  
+  // Create a learning path step (authenticated users only)
+  app.post("/api/learning-paths/:id/steps", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const pathId = parseInt(req.params.id);
+      const path = await storage.getLearningPath(pathId);
+      
+      if (!path) {
+        return res.status(404).json({ message: "Learning path not found" });
+      }
+      
+      // Check if user is the creator of the learning path
+      if (path.createdByUserId !== req.user.id) {
+        return res.status(403).json({ message: "You can only add steps to your own learning paths" });
+      }
+      
+      const stepSchema = z.object({
+        title: z.string().min(3).max(100),
+        description: z.string(),
+        order: z.number().int().nonnegative(),
+        stepType: z.string(),
+        content: z.string(),
+        estimatedMinutes: z.number().int().positive(),
+        resourceUrl: z.string().url().nullable().optional()
+      });
+      
+      const validatedData = stepSchema.parse(req.body);
+      
+      const step = await storage.createLearningPathStep({
+        ...validatedData,
+        learningPathId: pathId,
+        resourceUrl: validatedData.resourceUrl || null
+      });
+      
+      res.status(201).json(step);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to create learning path step" });
+    }
+  });
+  
+  // Generate an AI learning path (authenticated users only)
+  app.post("/api/learning-paths/generate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const preferencesSchema = z.object({
+        category: z.string(),
+        difficulty: z.string(),
+        focusAreas: z.array(z.string()),
+        durationDays: z.number().int().positive()
+      });
+      
+      const validatedData = preferencesSchema.parse(req.body);
+      
+      const learningPath = await storage.generatePersonalizedLearningPath(
+        req.user.id,
+        validatedData
+      );
+      
+      res.status(201).json(learningPath);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ 
+        message: "Failed to generate learning path",
+        error: error.message 
+      });
+    }
+  });
+  
+  // User Learning Paths API
+  
+  // Get user's enrolled learning paths
+  app.get("/api/user/learning-paths", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userLearningPaths = await storage.getUserLearningPathDetailsByUserId(req.user.id);
+      res.json(userLearningPaths);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user learning paths" });
+    }
+  });
+  
+  // Enroll in a learning path
+  app.post("/api/learning-paths/:id/enroll", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const pathId = parseInt(req.params.id);
+      const path = await storage.getLearningPath(pathId);
+      
+      if (!path) {
+        return res.status(404).json({ message: "Learning path not found" });
+      }
+      
+      // Get first step to set as current
+      const steps = await storage.getLearningPathSteps(pathId);
+      const firstStep = steps.length > 0 ? steps[0] : null;
+      
+      // Create enrollment
+      const enrollment = await storage.enrollUserInLearningPath({
+        userId: req.user.id,
+        learningPathId: pathId,
+        status: "not_started",
+        progressPercent: 0,
+        currentStepId: firstStep?.id || null
+      });
+      
+      res.status(201).json(enrollment);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to enroll in learning path" });
+    }
+  });
+  
+  // Update progress in a learning path
+  app.put("/api/user/learning-paths/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userLearningPathId = parseInt(req.params.id);
+      const userLearningPath = await storage.getUserLearningPath(userLearningPathId);
+      
+      if (!userLearningPath) {
+        return res.status(404).json({ message: "User learning path not found" });
+      }
+      
+      if (userLearningPath.userId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to update this learning path" });
+      }
+      
+      const updateSchema = z.object({
+        status: z.string().optional(),
+        currentStepId: z.number().int().nullable().optional(),
+        progressPercent: z.number().min(0).max(100).optional()
+      });
+      
+      const validatedData = updateSchema.parse(req.body);
+      
+      const updatedUserLearningPath = await storage.updateUserLearningPathProgress(
+        userLearningPathId,
+        validatedData
+      );
+      
+      res.json(updatedUserLearningPath);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to update learning path progress" });
+    }
+  });
+  
+  // Mark a step as completed
+  app.post("/api/user/learning-paths/:pathId/steps/:stepId/complete", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userLearningPathId = parseInt(req.params.pathId);
+      const stepId = parseInt(req.params.stepId);
+      
+      const userLearningPath = await storage.getUserLearningPath(userLearningPathId);
+      
+      if (!userLearningPath) {
+        return res.status(404).json({ message: "User learning path not found" });
+      }
+      
+      if (userLearningPath.userId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to update this learning path" });
+      }
+      
+      const completionSchema = z.object({
+        notes: z.string().optional(),
+        rating: z.number().min(1).max(5).optional()
+      });
+      
+      const validatedData = completionSchema.parse(req.body);
+      
+      const completion = await storage.markStepAsCompleted({
+        userLearningPathId,
+        stepId,
+        notes: validatedData.notes || null,
+        rating: validatedData.rating || null
+      });
+      
+      res.status(201).json(completion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to mark step as completed" });
     }
   });
 

@@ -114,6 +114,9 @@ export interface IStorage {
   
   // Session storage
   sessionStore: session.Store;
+  
+  // Helper method
+  seedLearningPaths(): void;
 }
 
 export class MemStorage implements IStorage {
