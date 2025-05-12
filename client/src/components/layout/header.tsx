@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth0 } from "@/hooks/use-auth0";
+import { useDevAuth } from "@/hooks/use-dev-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Header() {
   const [location] = useLocation();
-  const { user, isAuthenticated, logout, loginWithRedirect } = useAuth0();
+  const { user, isAuthenticated, logout, loginWithRedirect } = useDevAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Get user's initials for Avatar fallback
@@ -32,7 +32,7 @@ export default function Header() {
     if (!user?.name) return "U";
     return user.name
       .split(" ")
-      .map((n) => n[0])
+      .map((n: string) => n[0])
       .join("")
       .toUpperCase()
       .substring(0, 2);
@@ -52,11 +52,7 @@ export default function Header() {
   };
   
   const handleLogout = () => {
-    logout({
-      logoutParams: {
-        returnTo: window.location.origin,
-      },
-    });
+    logout();
   };
   
   const handleLogin = () => {

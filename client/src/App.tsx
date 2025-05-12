@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -9,18 +8,22 @@ import DashboardPage from "@/pages/dashboard-page";
 import GoalsPage from "@/pages/goals-page";
 import CommunityPage from "@/pages/community-page";
 import AnalyticsPage from "@/pages/analytics-page";
-import { ProtectedRoute } from "./lib/protected-route";
-import { Auth0ProviderWithNavigate } from "./hooks/use-auth0";
-import Auth0Setup from "@/components/auth/auth0-setup";
-import { Auth0Config } from "@/hooks/use-auth0-config";
+import { DevProtectedRoute } from "./lib/dev-protected-route";
+import { DevAuthProvider } from "./hooks/use-dev-auth";
+
+// For production, these imports would be used:
+// import { ProtectedRoute } from "./lib/protected-route";
+// import { Auth0ProviderWithNavigate } from "./hooks/use-auth0";
+// import Auth0Setup from "@/components/auth/auth0-setup";
+// import { Auth0Config } from "@/hooks/use-auth0-config";
 
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/goals" component={GoalsPage} />
-      <ProtectedRoute path="/community" component={CommunityPage} />
-      <ProtectedRoute path="/analytics" component={AnalyticsPage} />
+      <DevProtectedRoute path="/" component={DashboardPage} />
+      <DevProtectedRoute path="/goals" component={GoalsPage} />
+      <DevProtectedRoute path="/community" component={CommunityPage} />
+      <DevProtectedRoute path="/analytics" component={AnalyticsPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -28,6 +31,19 @@ function Router() {
 }
 
 function App() {
+  // Development mode - no Auth0 configuration needed
+  return (
+    <QueryClientProvider client={queryClient}>
+      <DevAuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </DevAuthProvider>
+    </QueryClientProvider>
+  );
+
+  /* Production Auth0 implementation for future use:
   const [isAuth0Configured, setIsAuth0Configured] = useState<boolean | null>(null);
   
   useEffect(() => {
@@ -58,6 +74,7 @@ function App() {
       </Auth0ProviderWithNavigate>
     </QueryClientProvider>
   );
+  */
 }
 
 export default App;
