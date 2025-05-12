@@ -48,7 +48,7 @@ const CHALLENGES = [
     description: "Explore the best networking spots in San Francisco and connect with new people weekly. This challenge is designed to help people build their social networks, discover new venues, and practice social skills in various environments.",
     category: "social",
     difficulty: "medium",
-    participants: 68,
+    participantCount: 68,
     durationDays: 30,
     startDate: new Date(2025, 4, 15),
     endDate: new Date(2025, 5, 15),
@@ -366,7 +366,7 @@ export default function ChallengePage() {
                     </div>
                     <div className="flex items-center">
                       <Users className="h-4 w-4 mr-1" /> 
-                      <span>{challenge.participants} participants</span>
+                      <span>{challenge.participantCount} participants</span>
                     </div>
                   </div>
                 </div>

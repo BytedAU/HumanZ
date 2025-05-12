@@ -624,7 +624,7 @@ export default function CommunityPage() {
                           <div className="flex flex-col items-center order-2 md:order-1">
                             <div className="relative">
                               <Avatar className="h-20 w-20 border-4 border-silver mb-2">
-                                <AvatarImage src={null} />
+                                <AvatarImage src={undefined} />
                                 <AvatarFallback className="text-xl">{getInitials(leaderboardData.leaderboard[1].name)}</AvatarFallback>
                               </Avatar>
                               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-silver text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg">2</div>
@@ -637,7 +637,7 @@ export default function CommunityPage() {
                           <div className="flex flex-col items-center order-1 md:order-2">
                             <div className="relative">
                               <Avatar className="h-24 w-24 border-4 border-amber-500 mb-2">
-                                <AvatarImage src={null} />
+                                <AvatarImage src={undefined} />
                                 <AvatarFallback className="text-2xl">{getInitials(leaderboardData.leaderboard[0].name)}</AvatarFallback>
                               </Avatar>
                               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-amber-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-xl">1</div>
@@ -823,7 +823,9 @@ export default function CommunityPage() {
 }
 
 // Import missing components
-function Check(props) {
+interface IconProps extends React.SVGProps<SVGSVGElement> {}
+
+function Check(props: IconProps) {
   return (
     <svg
       {...props}
@@ -842,7 +844,7 @@ function Check(props) {
   );
 }
 
-function Circle(props) {
+function Circle(props: IconProps) {
   return (
     <svg
       {...props}
@@ -861,7 +863,7 @@ function Circle(props) {
   );
 }
 
-function Book(props) {
+function Book(props: IconProps) {
   return (
     <svg
       {...props}
@@ -881,7 +883,7 @@ function Book(props) {
   );
 }
 
-function Brain(props) {
+function Brain(props: IconProps) {
   return (
     <svg
       {...props}

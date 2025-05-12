@@ -171,9 +171,25 @@ const formatDate = (date: Date) => {
   }).format(date);
 };
 
+// Define challenge type
+interface Challenge {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  participants: number;
+  durationDays: number;
+  startDate: Date;
+  isCollaborative: boolean;
+  progress: number;
+  status: string;
+  imageUrl: string;
+}
+
 // Function to get badge colors by category
-const getCategoryBadgeColor = (category: string) => {
-  const colors = {
+const getCategoryBadgeColor = (category: string): string => {
+  const colors: Record<string, string> = {
     social: "bg-blue-500",
     mindfulness: "bg-purple-500",
     leadership: "bg-amber-500",
@@ -187,7 +203,7 @@ const getCategoryBadgeColor = (category: string) => {
 };
 
 // Challenge card component
-const ChallengeCard = ({ challenge, showProgress = true }) => {
+const ChallengeCard = ({ challenge, showProgress = true }: { challenge: Challenge; showProgress?: boolean }) => {
   return (
     <Card className="overflow-hidden h-full hover:shadow-md transition-shadow">
       <div className="relative h-40 w-full">
