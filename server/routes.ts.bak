@@ -28,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Set up authentication routes
   setupAuth(app);
-
+  
   // Create HTTP server
   const httpServer = createServer(app);
   
@@ -155,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Update challenge participant count
-      if (challenge.currentParticipants !== null) {
+      if (challenge.currentParticipants !== undefined) {
         await storage.updateChallenge(challengeId, { 
           currentParticipants: challenge.currentParticipants + 1 
         });
@@ -335,27 +335,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
-  // Setup API Routes
-  setupApiRoutes(app);
-  
   // Return the HTTP server
   return httpServer;
 }
 
-// Define the API routes for the application
-function setupApiRoutes(app: Express) {
-  // Goals API
-  app.get("/api/goals", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const goals = await storage.getGoalsByUserId(req.user.id);
-      res.json(goals);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch goals" });
-    }
-  });
-  
   app.post("/api/goals", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
@@ -373,9 +356,9 @@ function setupApiRoutes(app: Express) {
       const goal = await storage.createGoal({
         userId: req.user.id,
         title: validatedData.title,
-        description: validatedData.description || null,
+        description: validatedData.description,
         category: validatedData.category,
-        deadline: validatedData.deadline ? new Date(validatedData.deadline) : null,
+        deadline: validatedData.deadline ? new Date(validatedData.deadline) : undefined,
         priority: validatedData.priority || "medium",
         progress: 0,
         isCompleted: false
@@ -389,31 +372,27 @@ function setupApiRoutes(app: Express) {
       res.status(500).json({ message: "Failed to create goal" });
     }
   });
-  
-  app.patch("/api/goals/:id", async (req, res) => {
+
+  app.put("/api/goals/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const goalId = parseInt(req.params.id);
-    if (isNaN(goalId)) {
-      return res.status(400).json({ message: "Invalid goal ID" });
-    }
-    
     try {
-      const existingGoal = await storage.getGoal(goalId);
+      const goalId = parseInt(req.params.id);
+      const goal = await storage.getGoal(goalId);
       
-      if (!existingGoal) {
+      if (!goal) {
         return res.status(404).json({ message: "Goal not found" });
       }
       
-      if (existingGoal.userId !== req.user.id) {
+      if (goal.userId !== req.user.id) {
         return res.status(403).json({ message: "Not authorized to update this goal" });
       }
       
       const updateSchema = z.object({
         title: z.string().min(3).max(100).optional(),
-        description: z.string().nullable().optional(),
+        description: z.string().optional(),
         category: z.string().optional(),
-        deadline: z.string().nullable().optional(), // ISO date string
+        deadline: z.string().optional(), // ISO date string
         priority: z.string().optional(), // low, medium, high
         progress: z.number().min(0).max(100).optional(),
         isCompleted: z.boolean().optional()
@@ -421,7 +400,7 @@ function setupApiRoutes(app: Express) {
       
       const validatedData = updateSchema.parse(req.body);
       
-      // If deadline is provided as string, convert to Date
+      // If deadline is provided, convert to Date
       if (validatedData.deadline) {
         validatedData.deadline = new Date(validatedData.deadline);
       }
@@ -435,37 +414,36 @@ function setupApiRoutes(app: Express) {
       res.status(500).json({ message: "Failed to update goal" });
     }
   });
-  
+
   app.delete("/api/goals/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const goalId = parseInt(req.params.id);
-    if (isNaN(goalId)) {
-      return res.status(400).json({ message: "Invalid goal ID" });
-    }
-    
     try {
-      const existingGoal = await storage.getGoal(goalId);
+      const goalId = parseInt(req.params.id);
+      const goal = await storage.getGoal(goalId);
       
-      if (!existingGoal) {
+      if (!goal) {
         return res.status(404).json({ message: "Goal not found" });
       }
       
-      if (existingGoal.userId !== req.user.id) {
+      if (goal.userId !== req.user.id) {
         return res.status(403).json({ message: "Not authorized to delete this goal" });
       }
       
-      await storage.deleteGoal(goalId);
-      res.sendStatus(204);
+      const success = await storage.deleteGoal(goalId);
+      
+      if (success) {
+        res.sendStatus(204);
+      } else {
+        res.status(500).json({ message: "Failed to delete goal" });
+      }
     } catch (error) {
       res.status(500).json({ message: "Failed to delete goal" });
     }
   });
-  
-  // Assessment routes
+
+  // Assessments API
   app.get("/api/assessments", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
     try {
       const assessments = await storage.getAllAssessments();
       res.json(assessments);
@@ -473,56 +451,37 @@ function setupApiRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch assessments" });
     }
   });
-  
-  app.get("/api/user-assessments", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const userAssessments = await storage.getUserAssessmentsByUserId(req.user.id);
-      res.json(userAssessments);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch assessment history" });
-    }
-  });
-  
+
   app.post("/api/assessments/:id/complete", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const assessmentId = parseInt(req.params.id);
-    if (isNaN(assessmentId)) {
-      return res.status(400).json({ message: "Invalid assessment ID" });
-    }
-    
     try {
+      const assessmentId = parseInt(req.params.id);
       const assessment = await storage.getAssessment(assessmentId);
       
       if (!assessment) {
         return res.status(404).json({ message: "Assessment not found" });
       }
       
-      const answersSchema = z.object({
-        responses: z.record(z.string(), z.number().min(1).max(10))
-      });
+      const answersSchema = z.array(
+        z.object({
+          questionId: z.number(),
+          answer: z.number().min(1).max(10)
+        })
+      );
       
-      const validatedData = answersSchema.parse(req.body);
+      const validatedData = answersSchema.parse(req.body.answers);
       
-      // Calculate score (simple average for now)
-      const values = Object.values(validatedData.responses) as number[];
-      const score = values.reduce((sum, val) => sum + val, 0) / values.length;
+      // Generate AI feedback
+      const feedback = await generateAssessmentFeedback(assessment.category, validatedData);
       
-      // Create user assessment
+      // Save assessment results
       const userAssessment = await storage.createUserAssessment({
         userId: req.user.id,
-        assessmentId,
-        responses: validatedData.responses,
-        score
+        assessmentId: assessmentId,
+        score: feedback.overallScore,
+        results: feedback
       });
-      
-      // Generate AI feedback if OPENAI_API_KEY is available
-      let feedback = null;
-      if (process.env.OPENAI_API_KEY) {
-        feedback = await generateAssessmentFeedback(assessment, userAssessment);
-      }
       
       res.status(201).json({
         userAssessment,
@@ -532,75 +491,23 @@ function setupApiRoutes(app: Express) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: "Failed to submit assessment" });
+      res.status(500).json({ message: "Failed to complete assessment" });
     }
   });
-  
-  // Growth Tracking routes
-  app.get("/api/growth", async (req, res) => {
+
+  app.get("/api/user-assessments", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      const growth = await storage.getGrowthByUserId(req.user.id);
-      res.json(growth);
+      const userAssessments = await storage.getUserAssessmentsByUserId(req.user.id);
+      res.json(userAssessments);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch growth data" });
+      res.status(500).json({ message: "Failed to fetch assessment results" });
     }
   });
-  
-  app.get("/api/growth/weekly", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const weeklyGrowth = await storage.getWeeklyGrowthByUserId(req.user.id);
-      
-      // Generate insights if OPENAI_API_KEY is available
-      let insights = null;
-      if (process.env.OPENAI_API_KEY && weeklyGrowth.length > 0) {
-        insights = await generateGrowthInsights(weeklyGrowth);
-      }
-      
-      res.json({
-        data: weeklyGrowth,
-        insights
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch weekly growth data" });
-    }
-  });
-  
-  app.post("/api/growth", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const growthSchema = z.object({
-        category: z.string(),
-        value: z.number().min(0).max(100),
-        date: z.string() // ISO date string
-      });
-      
-      const validatedData = growthSchema.parse(req.body);
-      
-      const growth = await storage.createGrowth({
-        userId: req.user.id,
-        category: validatedData.category,
-        value: validatedData.value,
-        date: new Date(validatedData.date)
-      });
-      
-      res.status(201).json(growth);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      res.status(500).json({ message: "Failed to record growth data" });
-    }
-  });
-  
-  // Challenge routes
+
+  // Challenges API
   app.get("/api/challenges", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
     try {
       const challenges = await storage.getAllChallenges();
       res.json(challenges);
@@ -608,52 +515,18 @@ function setupApiRoutes(app: Express) {
       res.status(500).json({ message: "Failed to fetch challenges" });
     }
   });
-  
-  app.get("/api/challenges/collaborative", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    try {
-      const challenges = await storage.getCollaborativeChallenges();
-      res.json(challenges);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch collaborative challenges" });
-    }
-  });
-  
-  app.get("/api/challenges/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const challengeId = parseInt(req.params.id);
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ message: "Invalid challenge ID" });
-    }
-    
-    try {
-      const challenge = await storage.getChallenge(challengeId);
-      
-      if (!challenge) {
-        return res.status(404).json({ message: "Challenge not found" });
-      }
-      
-      res.json(challenge);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch challenge" });
-    }
-  });
-  
+
   app.post("/api/challenges", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
       const challengeSchema = z.object({
         title: z.string().min(3).max(100),
-        description: z.string(),
+        description: z.string().optional(),
         category: z.string(),
         duration: z.number().min(1),
-        challengeType: z.enum(['individual', 'collaborative']),
         startDate: z.string(), // ISO date string
-        endDate: z.string(), // ISO date string
-        maxParticipants: z.number().nullable()
+        endDate: z.string() // ISO date string
       });
       
       const validatedData = challengeSchema.parse(req.body);
@@ -663,20 +536,9 @@ function setupApiRoutes(app: Express) {
         description: validatedData.description,
         category: validatedData.category,
         duration: validatedData.duration,
-        challengeType: validatedData.challengeType,
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
-        createdBy: req.user.id,
-        maxParticipants: validatedData.maxParticipants,
-        currentParticipants: 0
-      });
-      
-      // Create an activity for the challenge creation
-      await storage.createChallengeActivity({
-        challengeId: challenge.id,
-        userId: req.user.id,
-        activityType: 'create',
-        data: { timestamp: new Date().toISOString() }
+        createdBy: req.user.id
       });
       
       res.status(201).json(challenge);
@@ -687,16 +549,12 @@ function setupApiRoutes(app: Express) {
       res.status(500).json({ message: "Failed to create challenge" });
     }
   });
-  
+
   app.post("/api/challenges/:id/join", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const challengeId = parseInt(req.params.id);
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ message: "Invalid challenge ID" });
-    }
-    
     try {
+      const challengeId = parseInt(req.params.id);
       const challenge = await storage.getChallenge(challengeId);
       
       if (!challenge) {
@@ -704,311 +562,406 @@ function setupApiRoutes(app: Express) {
       }
       
       // Check if user already joined
-      const existing = (await storage.getUserChallengesByChallengeId(challengeId))
-        .find(uc => uc.userId === req.user.id);
+      const userChallenges = await storage.getUserChallengesByUserId(req.user.id);
+      const alreadyJoined = userChallenges.find(uc => uc.challengeId === challengeId);
       
-      if (existing) {
+      if (alreadyJoined) {
         return res.status(400).json({ message: "Already joined this challenge" });
       }
       
-      // Check if challenge is full
-      if (challenge.maxParticipants !== null && 
-          challenge.currentParticipants !== null &&
-          challenge.currentParticipants >= challenge.maxParticipants) {
-        return res.status(400).json({ message: "Challenge is full" });
-      }
-      
-      // Join the challenge
       const userChallenge = await storage.createUserChallenge({
-        challengeId,
         userId: req.user.id,
+        challengeId: challengeId,
         progress: 0,
         isCompleted: false
       });
       
-      // Increment participant count
-      if (challenge.currentParticipants !== null) {
-        await storage.updateChallenge(challengeId, {
-          currentParticipants: challenge.currentParticipants + 1
-        });
-      }
-      
-      // Create activity
-      await storage.createChallengeActivity({
-        challengeId,
-        userId: req.user.id,
-        activityType: 'join',
-        data: { timestamp: new Date().toISOString() }
-      });
-      
-      res.status(200).json(userChallenge);
+      res.status(201).json(userChallenge);
     } catch (error) {
       res.status(500).json({ message: "Failed to join challenge" });
     }
   });
-  
-  app.patch("/api/challenges/:id/progress", async (req, res) => {
+
+  app.get("/api/user-challenges", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const challengeId = parseInt(req.params.id);
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ message: "Invalid challenge ID" });
+    try {
+      const userChallenges = await storage.getUserChallengesByUserId(req.user.id);
+      
+      // Get full challenge details for each user challenge
+      const challengeDetails = await Promise.all(
+        userChallenges.map(async (uc) => {
+          const challenge = await storage.getChallenge(uc.challengeId);
+          return {
+            ...uc,
+            challenge
+          };
+        })
+      );
+      
+      res.json(challengeDetails);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user challenges" });
     }
+  });
+
+  app.put("/api/user-challenges/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      // Get user's participation in this challenge
-      const userChallenges = await storage.getUserChallengesByChallengeId(challengeId);
-      const userChallenge = userChallenges.find(uc => uc.userId === req.user.id);
+      const userChallengeId = parseInt(req.params.id);
+      const userChallenge = await storage.getUserChallenge(userChallengeId);
       
       if (!userChallenge) {
-        return res.status(404).json({ message: "Not participating in this challenge" });
+        return res.status(404).json({ message: "User challenge not found" });
       }
       
-      // Validate input
-      const progressSchema = z.object({
-        progress: z.number().min(0).max(100),
-        completed: z.boolean().optional()
+      if (userChallenge.userId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to update this challenge" });
+      }
+      
+      const updateSchema = z.object({
+        progress: z.number().min(0).max(100).optional(),
+        isCompleted: z.boolean().optional()
       });
       
-      const validatedData = progressSchema.parse(req.body);
+      const validatedData = updateSchema.parse(req.body);
       
-      // Update progress
-      const updatedUserChallenge = await storage.updateUserChallenge(userChallenge.id, {
-        progress: validatedData.progress,
-        isCompleted: validatedData.completed
-      });
-      
-      // Create activity
-      await storage.createChallengeActivity({
-        challengeId,
-        userId: req.user.id,
-        activityType: validatedData.completed ? 'complete' : 'progress_update',
-        data: { 
-          progress: validatedData.progress,
-          timestamp: new Date().toISOString() 
-        }
-      });
-      
+      const updatedUserChallenge = await storage.updateUserChallenge(userChallengeId, validatedData);
       res.json(updatedUserChallenge);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: "Failed to update progress" });
+      res.status(500).json({ message: "Failed to update challenge progress" });
     }
   });
-  
-  app.get("/api/challenges/:id/messages", async (req, res) => {
+
+  // Growth API
+  app.get("/api/growth", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const challengeId = parseInt(req.params.id);
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ message: "Invalid challenge ID" });
-    }
-    
     try {
-      const messages = await storage.getChallengeMessages(challengeId);
-      res.json(messages);
+      const growth = await storage.getGrowthByUserId(req.user.id);
+      res.json(growth);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch messages" });
+      res.status(500).json({ message: "Failed to fetch growth data" });
     }
   });
-  
-  app.get("/api/challenges/:id/activities", async (req, res) => {
+
+  app.get("/api/growth/weekly", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const challengeId = parseInt(req.params.id);
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ message: "Invalid challenge ID" });
-    }
-    
     try {
-      const activities = await storage.getChallengeActivities(challengeId);
-      res.json(activities);
+      const weeklyGrowth = await storage.getWeeklyGrowthByUserId(req.user.id);
+      res.json(weeklyGrowth);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch activities" });
+      res.status(500).json({ message: "Failed to fetch weekly growth data" });
     }
   });
-  
-  app.post("/api/challenges/:id/messages", async (req, res) => {
+
+  app.post("/api/growth", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const challengeId = parseInt(req.params.id);
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ message: "Invalid challenge ID" });
-    }
-    
     try {
-      // Check if user is participating in the challenge
-      const userChallenges = await storage.getUserChallengesByChallengeId(challengeId);
-      const isParticipant = userChallenges.some(uc => uc.userId === req.user.id);
-      
-      if (!isParticipant) {
-        return res.status(403).json({ message: "Not participating in this challenge" });
-      }
-      
-      const messageSchema = z.object({
-        content: z.string().min(1)
+      const growthSchema = z.object({
+        date: z.string(), // ISO date string
+        value: z.number(),
+        category: z.string()
       });
       
-      const validatedData = messageSchema.parse(req.body);
+      const validatedData = growthSchema.parse(req.body);
       
-      const message = await storage.createChallengeMessage({
-        challengeId,
+      const growth = await storage.createGrowth({
         userId: req.user.id,
-        content: validatedData.content
+        date: new Date(validatedData.date),
+        value: validatedData.value,
+        category: validatedData.category
       });
       
-      res.status(201).json(message);
+      res.status(201).json(growth);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: "Failed to send message" });
+      res.status(500).json({ message: "Failed to record growth" });
     }
   });
-  
-  // AI-Generated Goal Recommendations
-  app.get("/api/recommendations/goals", async (req, res) => {
+
+  // AI Insights API
+  app.get("/api/insights/growth", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({ message: "AI recommendations are currently unavailable" });
-    }
-    
     try {
-      // Get user's past assessments
-      const assessments = await storage.getUserAssessmentsByUserId(req.user.id);
-      
-      // Get user's recent goals
-      const goals = await storage.getGoalsByUserId(req.user.id);
-      
-      // Get growth data
       const growthData = await storage.getGrowthByUserId(req.user.id);
       
-      // Generate AI recommendations
-      const recommendations = await generateGoalRecommendations(assessments, goals, growthData);
+      if (growthData.length === 0) {
+        return res.json({
+          trends: ["Not enough data to analyze trends yet"],
+          patterns: ["Start tracking your growth to see patterns"],
+          recommendations: [
+            "Set up your first goal",
+            "Take an assessment to establish a baseline",
+            "Join a challenge to kick-start your growth"
+          ]
+        });
+      }
       
+      const insights = await generateGrowthInsights(growthData);
+      res.json(insights);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate growth insights" });
+    }
+  });
+
+  app.get("/api/insights/goals", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const goals = await storage.getGoalsByUserId(req.user.id);
+      
+      const currentGoals = goals.map(goal => ({
+        title: goal.title,
+        category: goal.category,
+        progress: goal.progress
+      }));
+      
+      const userInterests = ["personal growth", "learning", "productivity"]; // Default interests
+      
+      const recommendations = await generateGoalRecommendations(currentGoals, userInterests);
       res.json(recommendations);
     } catch (error) {
-      res.status(500).json({ message: "Failed to generate recommendations" });
+      res.status(500).json({ message: "Failed to generate goal recommendations" });
+    }
+  });
+
+  // Leaderboard API
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      // This is a simplified leaderboard implementation
+      // In a real app, we would calculate this from actual growth data
+      
+      // Sample leaderboard data
+      const leaderboard = [
+        { id: 1, username: "emma_thompson", name: "Emma Thompson", avatar: null, growth: 42, category: "leadership" },
+        { id: 2, username: "michael_chen", name: "Michael Chen", avatar: null, growth: 38, category: "data_science" },
+        { id: 3, username: "sarah_johnson", name: "Sarah Johnson", avatar: null, growth: 35, category: "creative" },
+        { id: 4, username: "david_wilson", name: "David Wilson", avatar: null, growth: 29, category: "product" },
+        { id: 5, username: "jessica_lee", name: "Jessica Lee", avatar: null, growth: 27, category: "design" }
+      ];
+      
+      // If user is authenticated, add their position
+      if (req.isAuthenticated()) {
+        const userPosition = {
+          id: req.user.id,
+          username: req.user.username,
+          name: req.user.name,
+          avatar: req.user.avatar,
+          growth: 12,
+          category: "software",
+          position: 24 // Random position
+        };
+        
+        res.json({ leaderboard, userPosition });
+      } else {
+        res.json({ leaderboard });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
     }
   });
   
   // Learning Paths API
+  
+  // Seed some initial learning paths if needed (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    storage.seedLearningPaths();
+  }
+  
+  // Get all learning paths
   app.get("/api/learning-paths", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
     try {
-      const allPaths = await storage.getAllLearningPaths();
-      res.json(allPaths);
+      const learningPaths = await storage.getAllLearningPaths();
+      res.json(learningPaths);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch learning paths" });
     }
   });
   
+  // Search learning paths
   app.get("/api/learning-paths/search", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const { query, category, difficulty } = req.query;
-    
     try {
-      const results = await storage.searchLearningPaths(
-        query as string || "", 
-        category as string, 
-        difficulty as string
-      );
-      res.json(results);
+      const query = req.query.q as string || '';
+      const category = req.query.category as string;
+      const difficulty = req.query.difficulty as string;
+      
+      const learningPaths = await storage.searchLearningPaths(query, category, difficulty);
+      res.json(learningPaths);
     } catch (error) {
       res.status(500).json({ message: "Failed to search learning paths" });
     }
   });
   
+  // Get single learning path with steps
   app.get("/api/learning-paths/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const pathId = parseInt(req.params.id);
-    if (isNaN(pathId)) {
-      return res.status(400).json({ message: "Invalid learning path ID" });
-    }
-    
     try {
-      const path = await storage.getLearningPathWithSteps(pathId);
+      const pathId = parseInt(req.params.id);
+      const learningPath = await storage.getLearningPathWithSteps(pathId);
       
-      if (!path) {
+      if (!learningPath) {
         return res.status(404).json({ message: "Learning path not found" });
       }
       
-      res.json(path);
+      res.json(learningPath);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch learning path" });
     }
   });
   
-  app.post("/api/learning-paths/generate", async (req, res) => {
+  // Create a learning path (authenticated users only)
+  app.post("/api/learning-paths", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({ message: "AI generation is currently unavailable" });
-    }
-    
     try {
-      const { category, difficulty, focusAreas, durationDays } = req.body;
+      const pathSchema = z.object({
+        title: z.string().min(3).max(100),
+        description: z.string().min(10),
+        category: z.string(),
+        difficulty: z.string(),
+        estimatedDurationDays: z.number().int().positive(),
+        thumbnailUrl: z.string().url().nullable().optional()
+      });
       
-      const generatedPath = await storage.generatePersonalizedLearningPath(
-        req.user.id,
-        {
-          category,
-          difficulty,
-          focusAreas,
-          durationDays: parseInt(durationDays) || 7
-        }
-      );
+      const validatedData = pathSchema.parse(req.body);
       
-      res.status(201).json(generatedPath);
+      const learningPath = await storage.createLearningPath({
+        ...validatedData,
+        thumbnailUrl: validatedData.thumbnailUrl || null,
+        isAiGenerated: false,
+        createdByUserId: req.user.id
+      });
+      
+      res.status(201).json(learningPath);
     } catch (error) {
-      console.error('Error generating learning path:', error);
-      res.status(500).json({ message: "Failed to generate learning path" });
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to create learning path" });
     }
   });
   
-  app.get("/api/user/learning-paths", async (req, res) => {
+  // Create a learning path step (authenticated users only)
+  app.post("/api/learning-paths/:id/steps", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
     try {
-      const userPaths = await storage.getUserLearningPathDetailsByUserId(req.user.id);
-      res.json(userPaths);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch user learning paths" });
-    }
-  });
-  
-  app.post("/api/learning-paths/:id/enroll", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    
-    const pathId = parseInt(req.params.id);
-    if (isNaN(pathId)) {
-      return res.status(400).json({ message: "Invalid learning path ID" });
-    }
-    
-    try {
+      const pathId = parseInt(req.params.id);
       const path = await storage.getLearningPath(pathId);
       
       if (!path) {
         return res.status(404).json({ message: "Learning path not found" });
       }
       
-      // Get the first step
-      const steps = await storage.getLearningPathSteps(pathId);
-      const firstStepId = steps.length > 0 ? steps[0].id : null;
+      // Check if user is the creator of the learning path
+      if (path.createdByUserId !== req.user.id) {
+        return res.status(403).json({ message: "You can only add steps to your own learning paths" });
+      }
       
-      // Enroll user
+      const stepSchema = z.object({
+        title: z.string().min(3).max(100),
+        description: z.string(),
+        order: z.number().int().nonnegative(),
+        stepType: z.string(),
+        content: z.string(),
+        estimatedMinutes: z.number().int().positive(),
+        resourceUrl: z.string().url().nullable().optional()
+      });
+      
+      const validatedData = stepSchema.parse(req.body);
+      
+      const step = await storage.createLearningPathStep({
+        ...validatedData,
+        learningPathId: pathId,
+        resourceUrl: validatedData.resourceUrl || null
+      });
+      
+      res.status(201).json(step);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: "Failed to create learning path step" });
+    }
+  });
+  
+  // Generate an AI learning path (authenticated users only)
+  app.post("/api/learning-paths/generate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const preferencesSchema = z.object({
+        category: z.string(),
+        difficulty: z.string(),
+        focusAreas: z.array(z.string()),
+        durationDays: z.number().int().positive()
+      });
+      
+      const validatedData = preferencesSchema.parse(req.body);
+      
+      const learningPath = await storage.generatePersonalizedLearningPath(
+        req.user.id,
+        validatedData
+      );
+      
+      res.status(201).json(learningPath);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ 
+        message: "Failed to generate learning path",
+        error: error.message 
+      });
+    }
+  });
+  
+  // User Learning Paths API
+  
+  // Get user's enrolled learning paths
+  app.get("/api/user/learning-paths", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userLearningPaths = await storage.getUserLearningPathDetailsByUserId(req.user.id);
+      res.json(userLearningPaths);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user learning paths" });
+    }
+  });
+  
+  // Enroll in a learning path
+  app.post("/api/learning-paths/:id/enroll", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const pathId = parseInt(req.params.id);
+      const path = await storage.getLearningPath(pathId);
+      
+      if (!path) {
+        return res.status(404).json({ message: "Learning path not found" });
+      }
+      
+      // Get first step to set as current
+      const steps = await storage.getLearningPathSteps(pathId);
+      const firstStep = steps.length > 0 ? steps[0] : null;
+      
+      // Create enrollment
       const enrollment = await storage.enrollUserInLearningPath({
         userId: req.user.id,
         learningPathId: pathId,
-        currentStepId: firstStepId,
-        status: 'in_progress',
-        progressPercent: 0
+        status: "not_started",
+        progressPercent: 0,
+        currentStepId: firstStep?.id || null
       });
       
       res.status(201).json(enrollment);
@@ -1017,71 +970,74 @@ function setupApiRoutes(app: Express) {
     }
   });
   
-  app.patch("/api/user/learning-paths/:id/progress", async (req, res) => {
+  // Update progress in a learning path
+  app.put("/api/user/learning-paths/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const userLearningPathId = parseInt(req.params.id);
-    if (isNaN(userLearningPathId)) {
-      return res.status(400).json({ message: "Invalid user learning path ID" });
-    }
-    
     try {
-      const progressSchema = z.object({
-        currentStepId: z.number().optional(),
+      const userLearningPathId = parseInt(req.params.id);
+      const userLearningPath = await storage.getUserLearningPath(userLearningPathId);
+      
+      if (!userLearningPath) {
+        return res.status(404).json({ message: "User learning path not found" });
+      }
+      
+      if (userLearningPath.userId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to update this learning path" });
+      }
+      
+      const updateSchema = z.object({
         status: z.string().optional(),
+        currentStepId: z.number().int().nullable().optional(),
         progressPercent: z.number().min(0).max(100).optional()
       });
       
-      const validatedData = progressSchema.parse(req.body);
+      const validatedData = updateSchema.parse(req.body);
       
-      const updatedPath = await storage.updateUserLearningPathProgress(
+      const updatedUserLearningPath = await storage.updateUserLearningPathProgress(
         userLearningPathId,
         validatedData
       );
       
-      if (!updatedPath) {
-        return res.status(404).json({ message: "User learning path not found" });
-      }
-      
-      res.json(updatedPath);
+      res.json(updatedUserLearningPath);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: "Failed to update progress" });
+      res.status(500).json({ message: "Failed to update learning path progress" });
     }
   });
   
-  app.post("/api/user/learning-paths/:id/complete-step", async (req, res) => {
+  // Mark a step as completed
+  app.post("/api/user/learning-paths/:pathId/steps/:stepId/complete", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     
-    const userLearningPathId = parseInt(req.params.id);
-    if (isNaN(userLearningPathId)) {
-      return res.status(400).json({ message: "Invalid user learning path ID" });
-    }
-    
     try {
-      const stepSchema = z.object({
-        stepId: z.number()
-      });
+      const userLearningPathId = parseInt(req.params.pathId);
+      const stepId = parseInt(req.params.stepId);
       
-      const validatedData = stepSchema.parse(req.body);
+      const userLearningPath = await storage.getUserLearningPath(userLearningPathId);
       
-      const userPath = await storage.getUserLearningPath(userLearningPathId);
-      
-      if (!userPath) {
+      if (!userLearningPath) {
         return res.status(404).json({ message: "User learning path not found" });
       }
       
-      if (userPath.userId !== req.user.id) {
+      if (userLearningPath.userId !== req.user.id) {
         return res.status(403).json({ message: "Not authorized to update this learning path" });
       }
       
-      // Mark step as completed
+      const completionSchema = z.object({
+        notes: z.string().optional(),
+        rating: z.number().min(1).max(5).optional()
+      });
+      
+      const validatedData = completionSchema.parse(req.body);
+      
       const completion = await storage.markStepAsCompleted({
         userLearningPathId,
-        stepId: validatedData.stepId,
-        completedAt: new Date()
+        stepId,
+        notes: validatedData.notes || null,
+        rating: validatedData.rating || null
       });
       
       res.status(201).json(completion);
@@ -1089,7 +1045,11 @@ function setupApiRoutes(app: Express) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      res.status(500).json({ message: "Failed to complete step" });
+      res.status(500).json({ message: "Failed to mark step as completed" });
     }
   });
+
+  const httpServer = createServer(app);
+
+  return httpServer;
 }
