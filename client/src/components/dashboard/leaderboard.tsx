@@ -55,7 +55,7 @@ export default function Leaderboard({ data, isLoading }: LeaderboardProps) {
   
   // Get category label
   const getCategoryLabel = (category: string) => {
-    const categories = {
+    const categories: Record<string, string> = {
       leadership: "Leadership Expert",
       data_science: "Data Scientist",
       creative: "Creative Director",
