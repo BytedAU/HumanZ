@@ -317,12 +317,44 @@ export class MemStorage implements IStorage {
     return Array.from(this.challenges.values());
   }
   
+  async getCollaborativeChallenges(): Promise<Challenge[]> {
+    return Array.from(this.challenges.values())
+      .filter(challenge => challenge.challengeType === "collaborative");
+  }
+  
   async createChallenge(insertChallenge: InsertChallenge): Promise<Challenge> {
     const id = this.challengeIdCounter++;
     const createdAt = new Date();
-    const challenge: Challenge = { ...insertChallenge, id, createdAt };
+    
+    const challenge: Challenge = { 
+      id, 
+      createdAt,
+      title: insertChallenge.title,
+      description: insertChallenge.description || null,
+      category: insertChallenge.category,
+      duration: insertChallenge.duration,
+      startDate: insertChallenge.startDate,
+      endDate: insertChallenge.endDate,
+      createdBy: insertChallenge.createdBy,
+      challengeType: insertChallenge.challengeType || "individual",
+      maxParticipants: insertChallenge.maxParticipants || null,
+      currentParticipants: insertChallenge.currentParticipants || 0
+    };
+    
     this.challenges.set(id, challenge);
     return challenge;
+  }
+  
+  async updateChallenge(id: number, updates: Partial<Challenge>): Promise<Challenge | undefined> {
+    const challenge = this.challenges.get(id);
+    if (!challenge) {
+      return undefined;
+    }
+    
+    const updatedChallenge = { ...challenge, ...updates };
+    this.challenges.set(id, updatedChallenge);
+    
+    return updatedChallenge;
   }
 
   // UserChallenge methods
@@ -383,6 +415,62 @@ export class MemStorage implements IStorage {
     return growth;
   }
   
+  // Challenge real-time features
+  async getChallengeMessages(challengeId: number): Promise<ChallengeMessage[]> {
+    return Array.from(this.challengeMessages.values())
+      .filter(message => message.challengeId === challengeId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
+  
+  async createChallengeMessage(message: InsertChallengeMessage): Promise<ChallengeMessage> {
+    const id = this.challengeMessageIdCounter++;
+    const createdAt = new Date();
+    
+    const newMessage: ChallengeMessage = {
+      id,
+      createdAt,
+      challengeId: message.challengeId,
+      userId: message.userId,
+      content: message.content
+    };
+    
+    this.challengeMessages.set(id, newMessage);
+    
+    // Create an activity entry for this message
+    await this.createChallengeActivity({
+      challengeId: message.challengeId,
+      userId: message.userId,
+      activityType: "message",
+      data: { messageId: id, content: message.content }
+    });
+    
+    return newMessage;
+  }
+  
+  async getChallengeActivities(challengeId: number, limit = 20): Promise<ChallengeActivity[]> {
+    return Array.from(this.challengeActivities.values())
+      .filter(activity => activity.challengeId === challengeId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()) // newest first
+      .slice(0, limit);
+  }
+  
+  async createChallengeActivity(activity: InsertChallengeActivity): Promise<ChallengeActivity> {
+    const id = this.challengeActivityIdCounter++;
+    const createdAt = new Date();
+    
+    const newActivity: ChallengeActivity = {
+      id,
+      createdAt,
+      challengeId: activity.challengeId,
+      userId: activity.userId,
+      activityType: activity.activityType,
+      data: activity.data
+    };
+    
+    this.challengeActivities.set(id, newActivity);
+    return newActivity;
+  }
+  
   // Seed data methods
   private seedAssessments() {
     const sampleQuestions = [
@@ -439,6 +527,10 @@ export class MemStorage implements IStorage {
     const sixtyDaysLater = new Date(now);
     sixtyDaysLater.setDate(sixtyDaysLater.getDate() + 60);
     
+    // Events in San Francisco in 2025
+    const sfEventStart = new Date('2025-06-01');
+    const sfEventEnd = new Date('2025-09-01');
+    
     const challenges = [
       {
         title: "30-Day Learning Challenge",
@@ -447,7 +539,10 @@ export class MemStorage implements IStorage {
         duration: 30,
         startDate: now,
         endDate: thirtyDaysLater,
-        createdBy: 0 // System created
+        createdBy: 0, // System created
+        challengeType: "individual",
+        maxParticipants: null,
+        currentParticipants: 0
       },
       {
         title: "Book Reading Marathon",
@@ -456,7 +551,24 @@ export class MemStorage implements IStorage {
         duration: 60,
         startDate: now,
         endDate: sixtyDaysLater,
-        createdBy: 0 // System created
+        createdBy: 0, // System created
+        challengeType: "individual",
+        maxParticipants: null,
+        currentParticipants: 0
+      },
+      {
+        title: "San Francisco Social Explorer Challenge",
+        description: "Discover San Francisco's vibrant social scene with a group of like-minded explorers. " +
+                     "Join local events, food festivals, and cultural gatherings throughout summer 2025. " +
+                     "Members share recommendations, coordinate meetups, and document their experiences.",
+        category: "social",
+        duration: 92, // 3 months
+        startDate: sfEventStart,
+        endDate: sfEventEnd,
+        createdBy: 0, // System created
+        challengeType: "collaborative",
+        maxParticipants: 20,
+        currentParticipants: 1
       }
     ];
     
@@ -464,6 +576,21 @@ export class MemStorage implements IStorage {
       const id = this.challengeIdCounter++;
       const createdAt = new Date();
       this.challenges.set(id, { ...challenge, id, createdAt });
+      
+      // Add initial activity for SF challenge
+      if (challenge.title === "San Francisco Social Explorer Challenge") {
+        this.challengeActivities.set(this.challengeActivityIdCounter++, {
+          id: this.challengeActivityIdCounter,
+          challengeId: id,
+          userId: 0, // System
+          activityType: "milestone",
+          data: { 
+            title: "Challenge Created", 
+            description: "The San Francisco Social Explorer Challenge has been launched! Join to discover SF's vibrant scene in summer 2025."
+          },
+          createdAt: new Date()
+        });
+      }
     });
   }
 }
