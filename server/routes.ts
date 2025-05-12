@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { generateAssessmentFeedback, generateGrowthInsights, generateGoalRecommendations } from "./openai";
 import { implementLearningPathMethods } from "./storage-methods";
 import { z } from "zod";
+import { WebSocketServer, WebSocket } from 'ws';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize learning path methods

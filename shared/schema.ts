@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, decimal, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -85,27 +85,36 @@ export const insertUserAssessmentSchema = createInsertSchema(userAssessments).pi
   results: true,
 });
 
+// Challenge type enum
+export const challengeTypeEnum = pgEnum("challenge_type", ["individual", "collaborative"]);
+
 // Challenge model
 export const challenges = pgTable("challenges", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
   category: text("category").notNull(),
+  challengeType: challengeTypeEnum("challenge_type").default("individual").notNull(),
   duration: integer("duration").notNull(), // in days
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   createdBy: integer("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  maxParticipants: integer("max_participants"), // Only for collaborative challenges
+  currentParticipants: integer("current_participants").default(0), // Only for collaborative challenges
 });
 
 export const insertChallengeSchema = createInsertSchema(challenges).pick({
   title: true,
   description: true,
   category: true,
+  challengeType: true,
   duration: true,
   startDate: true,
   endDate: true,
   createdBy: true,
+  maxParticipants: true,
+  currentParticipants: true,
 });
 
 // UserChallenge model (to track user participation in challenges)
