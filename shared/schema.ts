@@ -151,6 +151,42 @@ export const insertGrowthSchema = createInsertSchema(growth).pick({
   category: true,
 });
 
+// Challenge messages for collaborative challenges
+export const challengeMessages = pgTable("challenge_messages", {
+  id: serial("id").primaryKey(),
+  challengeId: integer("challenge_id").notNull(),
+  userId: integer("user_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertChallengeMessageSchema = createInsertSchema(challengeMessages).pick({
+  challengeId: true,
+  userId: true,
+  content: true,
+});
+
+// Challenge activity events for real-time updates
+export const challengeActivityEnum = pgEnum("challenge_activity_type", [
+  "join", "leave", "progress_update", "complete", "message", "milestone"
+]);
+
+export const challengeActivities = pgTable("challenge_activities", {
+  id: serial("id").primaryKey(),
+  challengeId: integer("challenge_id").notNull(),
+  userId: integer("user_id").notNull(),
+  activityType: challengeActivityEnum("activity_type").notNull(),
+  data: json("data"), // Flexible JSON data structure based on activity type
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertChallengeActivitySchema = createInsertSchema(challengeActivities).pick({
+  challengeId: true,
+  userId: true,
+  activityType: true,
+  data: true,
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -166,3 +202,7 @@ export type InsertUserChallenge = z.infer<typeof insertUserChallengeSchema>;
 export type UserChallenge = typeof userChallenges.$inferSelect;
 export type InsertGrowth = z.infer<typeof insertGrowthSchema>;
 export type Growth = typeof growth.$inferSelect;
+export type InsertChallengeMessage = z.infer<typeof insertChallengeMessageSchema>;
+export type ChallengeMessage = typeof challengeMessages.$inferSelect;
+export type InsertChallengeActivity = z.infer<typeof insertChallengeActivitySchema>;
+export type ChallengeActivity = typeof challengeActivities.$inferSelect;

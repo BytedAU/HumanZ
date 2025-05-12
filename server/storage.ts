@@ -1,4 +1,5 @@
-import { users, goals, assessments, userAssessments, challenges, userChallenges, growth } from "@shared/schema";
+import { users, goals, assessments, userAssessments, challenges, userChallenges, growth,
+  challengeMessages, challengeActivities } from "@shared/schema";
 import type { 
   User, InsertUser, 
   Goal, InsertGoal, 
@@ -6,7 +7,9 @@ import type {
   UserAssessment, InsertUserAssessment,
   Challenge, InsertChallenge,
   UserChallenge, InsertUserChallenge,
-  Growth, InsertGrowth
+  Growth, InsertGrowth,
+  ChallengeMessage, InsertChallengeMessage,
+  ChallengeActivity, InsertChallengeActivity
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -56,7 +59,9 @@ export interface IStorage {
   // Challenge methods
   getChallenge(id: number): Promise<Challenge | undefined>;
   getAllChallenges(): Promise<Challenge[]>;
+  getCollaborativeChallenges(): Promise<Challenge[]>;
   createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  updateChallenge(id: number, updates: Partial<Challenge>): Promise<Challenge | undefined>;
   
   // UserChallenge methods
   getUserChallenge(id: number): Promise<UserChallenge | undefined>;
@@ -64,6 +69,13 @@ export interface IStorage {
   getUserChallengesByChallengeId(challengeId: number): Promise<UserChallenge[]>;
   createUserChallenge(userChallenge: InsertUserChallenge): Promise<UserChallenge>;
   updateUserChallenge(id: number, userChallenge: Partial<UserChallenge>): Promise<UserChallenge | undefined>;
+  
+  // Challenge real-time features
+  getChallengeMessages(challengeId: number): Promise<ChallengeMessage[]>;
+  createChallengeMessage(message: InsertChallengeMessage): Promise<ChallengeMessage>;
+  
+  getChallengeActivities(challengeId: number, limit?: number): Promise<ChallengeActivity[]>;
+  createChallengeActivity(activity: InsertChallengeActivity): Promise<ChallengeActivity>;
   
   // Growth methods
   getGrowthByUserId(userId: number): Promise<Growth[]>;
@@ -131,6 +143,8 @@ export class MemStorage implements IStorage {
   private learningPathSteps: Map<number, LearningPathStep>;
   private userLearningPaths: Map<number, UserLearningPath>;
   private userStepCompletions: Map<number, UserStepCompletion>;
+  private challengeMessages: Map<number, ChallengeMessage>;
+  private challengeActivities: Map<number, ChallengeActivity>;
   
   sessionStore: session.Store;
   
@@ -145,6 +159,8 @@ export class MemStorage implements IStorage {
   private learningPathStepIdCounter: number;
   private userLearningPathIdCounter: number;
   private userStepCompletionIdCounter: number;
+  private challengeMessageIdCounter: number;
+  private challengeActivityIdCounter: number;
 
   constructor() {
     this.users = new Map();
@@ -158,6 +174,8 @@ export class MemStorage implements IStorage {
     this.learningPathSteps = new Map();
     this.userLearningPaths = new Map();
     this.userStepCompletions = new Map();
+    this.challengeMessages = new Map();
+    this.challengeActivities = new Map();
     
     this.userIdCounter = 1;
     this.goalIdCounter = 1;
@@ -170,6 +188,8 @@ export class MemStorage implements IStorage {
     this.learningPathStepIdCounter = 1;
     this.userLearningPathIdCounter = 1;
     this.userStepCompletionIdCounter = 1;
+    this.challengeMessageIdCounter = 1;
+    this.challengeActivityIdCounter = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // 24h in ms
