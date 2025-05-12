@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useDevAuth } from "@/hooks/use-dev-auth";
+import { useAuth } from "@/hooks/use-dev-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Header() {
   const [location] = useLocation();
-  const { user, isAuthenticated, logout, loginWithRedirect } = useDevAuth();
+  const { user, loginMutation, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Get user's initials for Avatar fallback
@@ -52,13 +52,13 @@ export default function Header() {
   };
   
   const handleLogout = () => {
-    logout();
+    logoutMutation.mutate();
   };
   
   const handleLogin = () => {
-    loginWithRedirect({
-      appState: { returnTo: location },
-    });
+    // In production, would redirect to Auth0 login
+    // For now, we'll just simulate a redirect to auth page
+    window.location.href = '/auth';
   };
 
   return (
@@ -95,7 +95,7 @@ export default function Header() {
           
           {/* User menu and mobile menu button */}
           <div className="flex items-center">
-            {isAuthenticated ? (
+            {user ? (
               <>
                 <div className="hidden sm:flex sm:items-center">
                   <button className="p-1 rounded-full text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
@@ -109,7 +109,7 @@ export default function Header() {
                         <button className="flex rounded-full focus:outline-none focus:ring-2 focus:ring-primary">
                           <span className="sr-only">Open user menu</span>
                           <Avatar>
-                            <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                            <AvatarImage src={user?.avatar || ""} alt={user?.name || "User"} />
                             <AvatarFallback>{getInitials()}</AvatarFallback>
                           </Avatar>
                         </button>
@@ -148,7 +148,7 @@ export default function Header() {
                       <div className="flex flex-col space-y-4 py-4">
                         <div className="flex items-center mb-4">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={user?.picture || ""} alt={user?.name || "User"} />
+                            <AvatarImage src={user?.avatar || ""} alt={user?.name || "User"} />
                             <AvatarFallback>{getInitials()}</AvatarFallback>
                           </Avatar>
                           <div className="ml-3">

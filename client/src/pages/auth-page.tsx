@@ -1,304 +1,255 @@
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { insertUserSchema } from "@shared/schema";
-import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
-
-const loginSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const registerSchema = insertUserSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Please confirm your password"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
+import { useState } from 'react';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/use-dev-auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { BrainCircuit, Users, BadgeCheck, Lock } from 'lucide-react';
 
 export default function AuthPage() {
-  const { loginMutation, registerMutation, user } = useAuth();
-  const [, navigate] = useLocation();
+  const [, setLocation] = useLocation();
+  const { user, loginMutation, registerMutation } = useAuth();
+  const [activeTab, setActiveTab] = useState('login');
   
-  // Redirect if already logged in
+  // Login form
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  
+  // Register form
+  const [registerName, setRegisterName] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  
+  // If user is already logged in, redirect to home
   if (user) {
-    navigate("/");
+    setLocation('/');
     return null;
   }
   
-  // Login form
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-  
-  // Register form
-  const registerForm = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      name: "",
-      password: "",
-      confirmPassword: "",
-      bio: "",
-      avatar: "",
-    },
-  });
-  
-  const onLoginSubmit = (values: LoginFormValues) => {
-    loginMutation.mutate(values);
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    loginMutation.mutate({
+      username: loginUsername,
+      password: loginPassword
+    });
   };
   
-  const onRegisterSubmit = (values: RegisterFormValues) => {
-    // Remove confirmPassword as it's not expected by the API
-    const { confirmPassword, ...registerData } = values;
-    registerMutation.mutate(registerData);
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    registerMutation.mutate({
+      name: registerName,
+      username: registerUsername,
+      email: registerEmail,
+      password: registerPassword
+    });
   };
-
+  
+  // Dev mode shortcut for quick login
+  const handleDevLogin = () => {
+    loginMutation.mutate({
+      username: 'testuser',
+      password: 'password123'
+    });
+  };
+  
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <main className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-6xl grid md:grid-cols-2 gap-6 items-center">
-          {/* Hero Section */}
-          <div className="text-center md:text-left">
-            <div className="space-y-6">
-              <h1 className="text-4xl font-bold tracking-tight text-foreground">
-                Unlock Your Human Potential
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                HumanZ combines AI-powered assessment with community engagement to help you track and enhance your personal growth journey.
-              </p>
-              <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:space-x-4">
-                <div className="rounded-lg overflow-hidden">
-                  <img 
-                    src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1200&h=800&q=80" 
-                    alt="Team working together on growth journey" 
-                    className="w-full h-auto" 
-                  />
-                </div>
+    <div className="min-h-screen grid lg:grid-cols-2">
+      {/* Left Column - Form */}
+      <div className="flex items-center justify-center p-4 md:p-8">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Welcome to HumanZ</h1>
+            <p className="text-muted-foreground">Your personal growth and development platform</p>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid grid-cols-2 mb-8">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            
+            {/* Login Tab */}
+            <TabsContent value="login">
+              <Card>
+                <form onSubmit={handleLogin}>
+                  <CardHeader>
+                    <CardTitle>Login to your account</CardTitle>
+                    <CardDescription>
+                      Enter your username and password to access your account
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username</Label>
+                      <Input 
+                        id="username" 
+                        type="text" 
+                        placeholder="Enter your username" 
+                        value={loginUsername}
+                        onChange={(e) => setLoginUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <a href="#" className="text-sm text-primary hover:text-primary/90">
+                          Forgot password?
+                        </a>
+                      </div>
+                      <Input 
+                        id="password" 
+                        type="password" 
+                        placeholder="Enter your password" 
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-4">
+                    <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                      {loginMutation.isPending ? 'Logging in...' : 'Login'}
+                    </Button>
+                    <Button type="button" variant="outline" className="w-full" onClick={handleDevLogin}>
+                      Quick Dev Login
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </TabsContent>
+            
+            {/* Register Tab */}
+            <TabsContent value="register">
+              <Card>
+                <form onSubmit={handleRegister}>
+                  <CardHeader>
+                    <CardTitle>Create an account</CardTitle>
+                    <CardDescription>
+                      Enter your details to create a new account
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input 
+                        id="name" 
+                        type="text" 
+                        placeholder="Enter your full name" 
+                        value={registerName}
+                        onChange={(e) => setRegisterName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="registerUsername">Username</Label>
+                      <Input 
+                        id="registerUsername" 
+                        type="text" 
+                        placeholder="Choose a username" 
+                        value={registerUsername}
+                        onChange={(e) => setRegisterUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="Enter your email" 
+                        value={registerEmail}
+                        onChange={(e) => setRegisterEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="registerPassword">Password</Label>
+                      <Input 
+                        id="registerPassword" 
+                        type="password" 
+                        placeholder="Create a password" 
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                      {registerMutation.isPending ? 'Creating account...' : 'Create Account'}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </TabsContent>
+          </Tabs>
+          
+          <div className="mt-8 text-center text-sm text-muted-foreground">
+            <p>
+              By continuing, you agree to our{' '}
+              <a href="#" className="text-primary hover:text-primary/90">Terms of Service</a>{' '}
+              and{' '}
+              <a href="#" className="text-primary hover:text-primary/90">Privacy Policy</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right Column - Hero */}
+      <div className="hidden lg:flex bg-gradient-to-br from-primary/90 to-primary flex-col justify-center p-8 text-white">
+        <div className="max-w-lg mx-auto">
+          <h2 className="text-3xl font-bold mb-6">Accelerate Your Growth Journey</h2>
+          <p className="text-lg mb-12 text-white/90">
+            A personalized platform to measure, track, and enhance your human potential across cognitive, emotional, physical, and social dimensions.
+          </p>
+          
+          <div className="grid gap-6">
+            <div className="flex items-start gap-4">
+              <div className="bg-white/10 p-3 rounded-lg">
+                <BrainCircuit className="h-6 w-6" />
               </div>
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center">
-                  <svg className="h-6 w-6 text-secondary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-foreground">AI-powered assessment and goal-setting</span>
-                </div>
-                <div className="flex items-center">
-                  <svg className="h-6 w-6 text-secondary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-foreground">Track your weekly growth and progress</span>
-                </div>
-                <div className="flex items-center">
-                  <svg className="h-6 w-6 text-secondary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-foreground">Join community challenges and leaderboards</span>
-                </div>
+              <div>
+                <h3 className="font-semibold mb-1">AI-Driven Insights</h3>
+                <p className="text-white/80">Personalized learning paths and assessments powered by advanced AI</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <div className="bg-white/10 p-3 rounded-lg">
+                <Users className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Collaborative Challenges</h3>
+                <p className="text-white/80">Join the community in real-time growth challenges and activities</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <div className="bg-white/10 p-3 rounded-lg">
+                <BadgeCheck className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Track Your Progress</h3>
+                <p className="text-white/80">Visualize improvements with detailed analytics and milestone tracking</p>
               </div>
             </div>
           </div>
           
-          {/* Auth Forms */}
-          <div>
-            <Card className="p-6">
-              <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="register">Register</TabsTrigger>
-                </TabsList>
-                
-                {/* Login Tab */}
-                <TabsContent value="login">
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold">Welcome Back</h2>
-                      <p className="text-muted-foreground mt-2">Sign in to continue your growth journey</p>
-                    </div>
-                    
-                    <Form {...loginForm}>
-                      <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                        <FormField
-                          control={loginForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={loginForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Enter your password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full" 
-                          disabled={loginMutation.isPending}
-                        >
-                          {loginMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Signing In...
-                            </>
-                          ) : "Sign In"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </div>
-                </TabsContent>
-                
-                {/* Register Tab */}
-                <TabsContent value="register">
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <h2 className="text-2xl font-bold">Create Account</h2>
-                      <p className="text-muted-foreground mt-2">Join HumanZ and start your growth journey</p>
-                    </div>
-                    
-                    <Form {...registerForm}>
-                      <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                        <FormField
-                          control={registerForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Choose a username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="Enter your email" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your full name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Create a password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="confirmPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Confirm Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Confirm your password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full" 
-                          disabled={registerMutation.isPending}
-                        >
-                          {registerMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Creating Account...
-                            </>
-                          ) : "Create Account"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </Card>
-          </div>
-        </div>
-      </main>
-      
-      {/* Footer */}
-      <footer className="py-6 border-t">
-        <div className="container-custom">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <p className="text-center text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} HumanZ. All rights reserved.
-            </p>
-            <div className="flex gap-4">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                Terms of Service
-              </a>
+          <div className="mt-12 p-4 bg-white/10 rounded-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <Lock className="h-5 w-5" />
+              <h4 className="font-medium">Secure and Private</h4>
             </div>
+            <p className="text-sm text-white/80">
+              Your data is encrypted and never shared with third parties. HumanZ prioritizes your privacy and security on your growth journey.
+            </p>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
