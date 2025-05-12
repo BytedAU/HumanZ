@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-dev-auth";
+// import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,14 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export default function Header() {
   const [location] = useLocation();
-  const { user, loginMutation, logoutMutation } = useAuth();
+  // Create a mock user for now
+  const user = {
+    id: 1,
+    name: "Demo User",
+    email: "demo@example.com",
+    avatar: null,
+    username: "demouser"
+  };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Get user's initials for Avatar fallback
@@ -52,13 +59,13 @@ export default function Header() {
   };
   
   const handleLogout = () => {
-    logoutMutation.mutate();
+    // No-op for now
+    console.log("Logout clicked");
   };
   
   const handleLogin = () => {
-    // In production, would redirect to Auth0 login
-    // For now, we'll just simulate a redirect to auth page
-    window.location.href = '/auth';
+    // No-op for now
+    console.log("Login clicked");
   };
 
   return (

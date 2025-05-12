@@ -7,7 +7,8 @@ import GoalCard from "@/components/dashboard/goal-card";
 import WeeklyProgressChart from "@/components/dashboard/weekly-progress-chart";
 import Leaderboard from "@/components/dashboard/leaderboard";
 import ChallengeCard from "@/components/dashboard/challenge-card";
-import { useAuth } from "@/hooks/use-auth";
+// Auth hook temporarily removed
+// import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronRight, Sliders, Flame, Brain, Book, Users, Lightbulb } from "lucide-react";
 import { Goal, UserChallenge } from "@shared/schema";
@@ -15,7 +16,13 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  // Mock user for development
+  const user = {
+    id: 1,
+    name: "Demo User",
+    email: "demo@example.com",
+    isPremium: false
+  };
   
   // Fetch goals
   const { 
@@ -35,11 +42,20 @@ export default function DashboardPage() {
     queryKey: ["/api/user-challenges"],
   });
   
+  // Type for leaderboard data
+  interface LeaderboardData {
+    id: number;
+    name: string;
+    avatar: string | null;
+    points: number;
+    rank: number;
+  }
+  
   // Fetch leaderboard data
   const { 
     data: leaderboardData, 
     isLoading: isLoadingLeaderboard 
-  } = useQuery({
+  } = useQuery<LeaderboardData[]>({
     queryKey: ["/api/leaderboard"],
   });
   
@@ -272,7 +288,7 @@ export default function DashboardPage() {
             {/* Leaderboard */}
             <div>
               <h2 className="section-title">Leaderboard</h2>
-              <Leaderboard data={leaderboardData} isLoading={isLoadingLeaderboard} />
+              <Leaderboard data={leaderboardData || []} isLoading={isLoadingLeaderboard} />
             </div>
           </div>
           

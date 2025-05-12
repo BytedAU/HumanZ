@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronDown } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+// import { useAuth } from "@/hooks/use-auth";
 
 interface LeaderboardUser {
   id: number;
@@ -34,7 +34,13 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ data, isLoading }: LeaderboardProps) {
-  const { user } = useAuth();
+  // Mock user for development
+  const user = {
+    id: 1,
+    name: "Demo User",
+    avatar: null,
+    email: "demo@example.com"
+  };
   const [timeframe, setTimeframe] = useState<string>("week");
   
   // Get initials for avatar fallback

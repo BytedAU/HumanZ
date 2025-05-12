@@ -23,12 +23,12 @@ import { DevAuthProvider } from "./hooks/use-dev-auth";
 function Router() {
   return (
     <Switch>
-      <DevProtectedRoute path="/" component={DashboardPage} />
-      <DevProtectedRoute path="/goals" component={GoalsPage} />
-      <DevProtectedRoute path="/community" component={CommunityPage} />
-      <DevProtectedRoute path="/analytics" component={AnalyticsPage} />
-      <DevProtectedRoute path="/challenges" component={ChallengesPage} />
-      <DevProtectedRoute path="/challenges/:id" component={ChallengePage} />
+      <Route path="/" component={DashboardPage} />
+      <Route path="/goals" component={GoalsPage} />
+      <Route path="/community" component={CommunityPage} />
+      <Route path="/analytics" component={AnalyticsPage} />
+      <Route path="/challenges" component={ChallengesPage} />
+      <Route path="/challenges/:id" component={ChallengePage} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
@@ -37,15 +37,13 @@ function Router() {
 }
 
 function App() {
-  // Development mode - no Auth0 configuration needed
+  // Simplified mode - no auth for now
   return (
     <QueryClientProvider client={queryClient}>
-      <DevAuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </DevAuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 
